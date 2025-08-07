@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 
 const company = "dessigo";
@@ -16,8 +16,21 @@ export default function Hero() {
 
   const [hasAutoScrolled, setHasAutoScrolled] = useState(false);
 
+  // Using refs to keep track of latest values without triggering re-renders
+  const hasAutoScrolledRef = useRef(false);
+  const animatingRef = useRef(false);
+
+  useEffect(() => {
+    hasAutoScrolledRef.current = hasAutoScrolled;
+  }, [hasAutoScrolled]);
+
+  useEffect(() => {
+    animatingRef.current = animating;
+  }, [animating]);
+
   const runAnimation = useCallback(() => {
-    if (animating) return;
+    if (animatingRef.current) return;
+    animatingRef.current = true;
     setAnimating(true);
     setAnimationState("initial");
 
@@ -30,16 +43,18 @@ export default function Hero() {
     }, 1500);
 
     setTimeout(() => {
-      if (!hasAutoScrolled) {
+      if (!hasAutoScrolledRef.current) {
         smoothScrollTo(window.innerHeight, 800);
+        hasAutoScrolledRef.current = true;
         setHasAutoScrolled(true);
       }
     }, 3000);
 
     setTimeout(() => {
+      animatingRef.current = false;
       setAnimating(false);
     }, 1400);
-  }, [animating, hasAutoScrolled]);
+  }, []);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -52,12 +67,13 @@ export default function Hero() {
 
     window.scrollTo(0, 0);
 
-    if (!hasAutoScrolled) {
+    if (!hasAutoScrolledRef.current) {
       runAnimation();
     }
 
     const handleUserScroll = () => {
-      setHasAutoScrolled(true); // User ne manually scroll kar diya
+      hasAutoScrolledRef.current = true;
+      setHasAutoScrolled(true);
     };
 
     window.addEventListener("scroll", handleUserScroll, { passive: true });
@@ -65,7 +81,7 @@ export default function Hero() {
     return () => {
       window.removeEventListener("scroll", handleUserScroll);
     };
-  }, [runAnimation, hasAutoScrolled]);
+  }, [runAnimation]);
 
   function smoothScrollTo(targetY: number, duration: number) {
     const startY = window.scrollY || window.pageYOffset;
@@ -90,7 +106,7 @@ export default function Hero() {
   }
 
   function handleClick() {
-    if (animating) return;
+    if (animatingRef.current) return;
     runAnimation();
   }
 
@@ -106,9 +122,9 @@ export default function Hero() {
     >
       <style>
         {`@keyframes bg-move {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 100% 50%; }
-        }`}
+           0% { background-position: 0% 50%; }
+           100% { background-position: 100% 50%; }
+         }`}
       </style>
 
       <div className="sr-only">
@@ -122,7 +138,7 @@ export default function Hero() {
         className="relative z-10 flex font-bold cursor-pointer select-none"
         style={{
           userSelect: "none",
-          fontSize: "clamp(3rem, 8vw, 10rem)", // <-- Yeh line add/karein replace previously fixed 10rem size
+          fontSize: "clamp(3rem, 8vw, 10rem)",
         }}
         onClick={handleClick}
         role="button"
@@ -156,7 +172,7 @@ export default function Hero() {
               y: DO_INDEX.includes(i) ? -10 : 20,
               scale: DO_INDEX.includes(i) ? 1.2 : 0.8,
               x: 0,
-              rotate: DO_INDEX.includes(i) ? 0 : randomRotations[i] || 0, // use stored random rotation here
+              rotate: DO_INDEX.includes(i) ? 0 : randomRotations[i] || 0,
             },
           };
 
